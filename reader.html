@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <style>
+        html, body, #pageContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            vertical-align: top;
+        }
+
+        body img {
+            vertical-align: top;
+        }
+
+        body.sideways {
+            white-space: nowrap;
+        }
+
+        body.sideways img {
+            height: 100%;
+        }
+
+        body.downwards img {
+            width: 100%;
+        }
+
+        body.doubledownwards img {
+            width: 50%;
+        }
+        body.doubledownwards img[doublepage] {
+            width: 100%;
+        }
+        #fileInput {
+            display: none;
+        }
+        #pageContainer:empty{
+            display: none;
+        }
+        #pageContainer {
+            display: inline;
+        }
+        label {
+            display: inline-block;
+            background: black;
+            color: whitesmoke;
+            height: 100%;
+            width: 100%;
+            font-family: "Comic Sans MS";
+            text-align: center;
+            font-size: xx-large;
+        }
+        label:hover {
+            text-shadow: 2px 2px 4px grey,
+            -2px 2px 4px grey,
+            2px -2px 4px grey,
+            -2px -2px 4px grey;
+        }
+        label div {
+            position: relative;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        body.sideways label {
+            height: 100%;
+            width: 50%;
+        }
+        body.downwards label,
+        body.doubledownwards label
+        {
+            height: 50%;
+            width: 100%;
+        }
+        #pageContainer:empty ~ label{
+            height: 100%;
+            width: 100%;
+        }
+
+    </style>
+</head>
+<body class="sideways">
+
+<div id="pageContainer"></div><label for="fileInput"><div>open comic</div></label>
+<input type="file" id="fileInput" accesskey="o"/>
+
+<script src="lib/libunrar-js/jszip.min.js"></script>
+<script src="lib/libunrar-js/rpc.js"></script>
+<script type="application/javascript">
+
+    var pageContainer = document.getElementById('pageContainer'),
+        fileInput = document.getElementById('fileInput');
+
+    fileInput.addEventListener('change', function (event) {
+        processFile(event.target.files[0]);
+        return false
+    });
+
+    var rpc;
+    RPC.new("lib/libunrar-js/worker.js", {
+        loaded: function () {},
+        progressShow: function () {}
+    }).then(function (r) {
+        rpc = r;
+    });
+    document.addEventListener('dragover', function (event) {
+        event.stopPropagation();
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        return false
+    });
+    document.addEventListener('dragend', function (event) {
+        event.stopPropagation();
+        event.preventDefault();
+        return false
+    });
+    document.addEventListener('drop', function (event) {
+        event.stopPropagation();
+        event.preventDefault();
+        processFile(event.dataTransfer.files[0]);
+        return false
+    });
+    document.addEventListener('keyup', function (event) {
+        if (event.keyCode == 77) { // m
+            if (document.body.className == "sideways") {
+                document.body.className = "downwards";
+            }
+            else if (document.body.className == "downwards") {
+                document.body.className = "doubledownwards";
+            }
+            else {
+                document.body.className = "sideways";
+            }
+        }else if (event.keyCode == 32) { // spacebar
+            var imgs = document.getElementsByTagName('img');
+            if( imgs.length > 0) {
+                var x = imgs[3].width;
+                if (event.shiftKey) {
+                    x = x * -1;
+                }
+                window.scrollBy(x, 0);
+            }
+        }
+
+        return false;
+    });
+    document.addEventListener("mousewheel", MouseWheelHandler, false);
+    document.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
+
+    function MouseWheelHandler(e) {
+        if (e.axis == 2 && document.body.className == "sideways") {
+
+            var delta = (e.wheelDelta || e.detail);
+            window.scrollBy(delta*10 ,0);
+        }
+        return true;
+    }
+
+    function processFile(file) {
+        document.title = file.name;
+        var name = file.name.toLowerCase();
+        var ending = name.substr(-3);
+
+        pageContainer.innerHTML = "";
+
+        if (ending == 'cbr') {
+            unrar(file);
+        }else if (ending == 'cbz') {
+            unzip(file);
+        }
+
+        window.scrollTo(0,0);
+    }
+
+    function unzip(file) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var zip = new JSZip();
+            zip.load(e.target.result);
+            var files = zip.files;
+            Object.keys(files).sort().forEach(function (k) {
+                var entry = files[k];
+                if (!entry.dir) {
+                    render(new Blob([entry.asArrayBuffer()]));
+                }
+            });
+        };
+
+        reader.readAsArrayBuffer(file);
+    }
+
+    function unrar(file) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var data = e.target.result;
+            var dataToPass = [{name: file.name, content: data}];
+
+            rpc.transferables = [data];
+            rpc.unrar(dataToPass, '').then(function (ret) {
+                var iterate = function (files) {
+                    Object.keys(files).sort().forEach(function (k) {
+
+                        var entry = files[k];
+                        if (entry.type === 'dir') {
+                            iterate(entry.ls);
+                        } else if (entry.type === 'file') {
+                            render(new Blob([entry.fileContent]));
+                        }
+                    });
+                };
+                iterate(ret.ls);
+            });
+        };
+
+        reader.readAsArrayBuffer(file);
+    }
+
+    function render(blob) {
+        var url = (window.URL || window.webkitURL),
+            src = url.createObjectURL(blob),
+            img = document.createElement("img");
+        img.src = src;
+        img.addEventListener('load', function() {
+            if (this.width > this.height) {
+                this.setAttribute('doublepage', true);
+            }
+            url.revokeObjectURL(src);
+        });
+        img.addEventListener('error', function() {
+            pageContainer.removeChild(this);
+            url.revokeObjectURL(src);
+        });
+        pageContainer.appendChild(img);
+    }
+</script>
+</body>
+</html>

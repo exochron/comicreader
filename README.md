@@ -1,7 +1,8 @@
 # comicreader
-a minimal comic reader for the web
+A minimal comic reader for the web. Watch the [demo here](https://exochron.github.io/comicreader/).
 
 It currently supports only .cbz and .cbr comic files.
+The project is tested only on firefox, but it should work in all current gen browsers.
 
 ## Controls
 - Open a comic file by dragging onto or clicking on the black area.

@@ -46,6 +46,7 @@
         #pageContainer {
             display: inline;
         }
+
         #pageContainer.nocursor {
             cursor: none;
         }
@@ -236,26 +237,31 @@
 
     function processFiles(files) {
         pageContainer.innerHTML = "";
+        files = Array.from(files);
+        files.sort((a, b) => a.name.localeCompare(b.name));
+
         document.title = files[0].name;
-        Array.from(files).forEach(processFile)
+
+        files.forEach(processFile);
+
+        window.scrollTo(0, 0);
     }
 
     function processFile(file) {
         let name = file.name.toLowerCase();
         let ending = name.substr(-3);
 
-        pageContainer.innerHTML = "";
-
+        let container = document.createElement("span");
         if (ending === 'cbr') {
-            unrar(file);
+            pageContainer.appendChild(container);
+            unrar(file, container);
         } else if (ending === 'cbz') {
-            unzip(file);
+            pageContainer.appendChild(container);
+            unzip(file, container);
         }
-
-        window.scrollTo(0, 0);
     }
 
-    function unzip(file) {
+    async function unzip(file, container) {
         let reader = new FileReader();
         reader.onload = function (e) {
             let zip = new JSZip();
@@ -264,7 +270,7 @@
             Object.keys(files).sort().forEach(function (k) {
                 let entry = files[k];
                 if (!entry.dir) {
-                    render(new Blob([entry.asArrayBuffer()]));
+                    render(new Blob([entry.asArrayBuffer()]), container);
                 }
             });
         };
@@ -272,7 +278,7 @@
         reader.readAsArrayBuffer(file);
     }
 
-    function unrar(file) {
+    async function unrar(file, container) {
         let reader = new FileReader();
         reader.onload = function (e) {
             let data = e.target.result;
@@ -287,7 +293,7 @@
                         if (entry.type === 'dir') {
                             iterate(entry.ls);
                         } else if (entry.type === 'file') {
-                            render(new Blob([entry.fileContent]));
+                            render(new Blob([entry.fileContent]), container);
                         }
                     });
                 };
@@ -298,7 +304,7 @@
         reader.readAsArrayBuffer(file);
     }
 
-    function render(blob) {
+    function render(blob, container) {
         let url = (window.URL || window.webkitURL),
             src = url.createObjectURL(blob),
             img = document.createElement("img");
@@ -313,7 +319,7 @@
             pageContainer.removeChild(this);
             url.revokeObjectURL(src);
         });
-        pageContainer.appendChild(img);
+        container.appendChild(img);
     }
 </script>
 </body>

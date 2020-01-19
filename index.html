@@ -46,6 +46,9 @@
         #pageContainer {
             display: inline;
         }
+        #pageContainer.nocursor {
+            cursor: none;
+        }
 
         label {
             display: inline-block;
@@ -95,7 +98,7 @@
 <label for="fileInput">
     <span>open comic</span>
 </label>
-<input type="file" id="fileInput" accesskey="o"/>
+<input type="file" id="fileInput" accesskey="o" multiple/>
 
 <script src="lib/libunrar-js/jszip.min.js"></script>
 <script src="lib/libunrar-js/rpc.js"></script>
@@ -105,7 +108,7 @@
         fileInput = document.getElementById('fileInput');
 
     fileInput.addEventListener('change', function (event) {
-        processFile(event.target.files[0]);
+        processFiles(event.target.files);
         return false
     });
 
@@ -170,7 +173,7 @@
     document.addEventListener('drop', function (event) {
         event.stopPropagation();
         event.preventDefault();
-        processFile(event.dataTransfer.files[0]);
+        processFiles(event.dataTransfer.files);
         return false
     });
     document.addEventListener('keyup', function (event) {
@@ -189,6 +192,16 @@
             window.scrollBy(e.deltaY * 10, 0);
         }
     });
+
+    window.addEventListener('resize', function () {
+        setTimeout(function () {
+            if (!!window.fullScreen) {
+                pageContainer.className = "nocursor"
+            } else {
+                pageContainer.className = ""
+            }
+        }, 2000)
+    }, false);
 
     let gamepadTimer;
     window.addEventListener("gamepadconnected", function () {
@@ -221,8 +234,13 @@
         clearInterval(gamepadTimer)
     });
 
+    function processFiles(files) {
+        pageContainer.innerHTML = "";
+        document.title = files[0].name;
+        Array.from(files).forEach(processFile)
+    }
+
     function processFile(file) {
-        document.title = file.name;
         let name = file.name.toLowerCase();
         let ending = name.substr(-3);
 

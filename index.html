@@ -27,6 +27,15 @@
             width: 100%;
         }
 
+        body.downwards span span[doublepage] {
+            display: inline-block;
+            overflow: scroll;
+        }
+
+        body.downwards img[doublepage] {
+            width: 180%;
+        }
+
         body.doubledownwards img {
             width: 50%;
         }
@@ -205,9 +214,21 @@
     }, false);
 
     let gamepadTimer;
-    window.addEventListener("gamepadconnected", function () {
+    window.addEventListener('gamepadconnected', function () {
         gamepadTimer = setInterval(function () {
             let gp = navigator.getGamepads()[0];
+
+            // Right Stick
+            if (gp.axes[2] < -0.1 || gp.axes[2] > 0.1 || gp.axes[3] < -0.1 || gp.axes[3] > 0.1) {
+                let scroll = document.querySelector('span[doublepage]');
+                if (scroll) {
+                    scroll.scrollBy({
+                        top: gp.axes[3] * 100,
+                        left: gp.axes[2] * 100,
+                        behavior: "smooth"
+                    });
+                }
+            }
 
             // LB
             if (gp.buttons[4].pressed) {
@@ -269,7 +290,7 @@
             let files = zip.files;
             Object.keys(files).sort().forEach(function (k) {
                 let entry = files[k];
-                if (!entry.dir) {
+                if (!entry.dir && false === isNoImage(entry.name)) {
                     render(new Blob([entry.asArrayBuffer()]), container);
                 }
             });
@@ -292,7 +313,7 @@
                         let entry = files[k];
                         if (entry.type === 'dir') {
                             iterate(entry.ls);
-                        } else if (entry.type === 'file') {
+                        } else if (entry.type === 'file' && false === isNoImage(entry.fullFileName)) {
                             render(new Blob([entry.fileContent]), container);
                         }
                     });
@@ -304,14 +325,20 @@
         reader.readAsArrayBuffer(file);
     }
 
+    function isNoImage(fileName) {
+        return !!fileName.toLowerCase().match(/\.xml$|\.json$|\.txt$/);
+    }
+
     function render(blob, container) {
-        let url = (window.URL || window.webkitURL),
+        let span = document.createElement('span'),
+            url = (window.URL || window.webkitURL),
             src = url.createObjectURL(blob),
-            img = document.createElement("img");
+            img = document.createElement('img');
         img.src = src;
         img.addEventListener('load', function () {
             if (this.width > this.height) {
-                this.setAttribute('doublepage', true);
+                this.setAttribute('doublepage', 'true');
+                span.setAttribute('doublepage', 'true');
             }
             url.revokeObjectURL(src);
         });
@@ -319,7 +346,9 @@
             pageContainer.removeChild(this);
             url.revokeObjectURL(src);
         });
-        container.appendChild(img);
+
+        span.appendChild(img);
+        container.appendChild(span);
     }
 </script>
 </body>

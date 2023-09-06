@@ -7,8 +7,9 @@ The project is tested only on firefox, but it should work in all current gen bro
 ## Controls
 - Open a comic file by dragging onto or clicking on the black area.
 - Use scroll wheel or cursor buttons to scroll through pages.
-- Press [Space] key to flip to next page.
-- Use [M] key to switch orientation mode. (Mode is not saved.)
+- Press [Space] key to flip to next page. [Shift+Space] for previous Page.
+- Use [M] key to switch orientation mode.
+- Use [R] key to toggle reverse mode. (Great for reading Manga ;-))
 
 ## Used Libraries
 - [wcchoi/libunrar-js](https://github.com/wcchoi/libunrar-js) for rar support.
